@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZIP暗号化ツール</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body {
+            background-color: #36393f;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+        .container {
+            background: #2f3136;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            width: 300px;
+            text-align: center;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #5865f2;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #4752c4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>ZIP暗号化ツール</h2>
+        <input type="file" id="fileInput">
+        <input type="password" id="password" placeholder="パスワード">
+        <button onclick="encryptFile()">暗号化</button>
+        <button onclick="decryptFile()">復号化</button>
+    </div>
+
+    <script>
+        function encryptFile() {
+            const fileInput = document.getElementById('fileInput').files[0];
+            const password = document.getElementById('password').value;
+            if (!fileInput || !password) return alert("ファイルとパスワードを入力してください");
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const data = CryptoJS.enc.Base64.stringify(CryptoJS.lib.WordArray.create(event.target.result));
+                const iv = CryptoJS.lib.WordArray.random(16);
+                const key = CryptoJS.PBKDF2(password, iv, { keySize: 256 / 32 });
+                const encrypted = CryptoJS.AES.encrypt(data, key, { iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
+                
+                const encryptedBlob = new Blob([iv.toString(CryptoJS.enc.Hex) + encrypted.toString()], { type: "text/plain" });
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(encryptedBlob);
+                a.download = fileInput.name + ".enc";
+                a.click();
+            };
+            reader.readAsArrayBuffer(fileInput);
+        }
+        
+        function decryptFile() {
+            const fileInput = document.getElementById('fileInput').files[0];
+            const password = document.getElementById('password').value;
+            if (!fileInput || !password) return alert("ファイルとパスワードを入力してください");
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const encryptedText = event.target.result;
+                    const ivHex = encryptedText.substring(0, 32);
+                    const encryptedData = encryptedText.substring(32);
+                    const iv = CryptoJS.enc.Hex.parse(ivHex);
+                    const key = CryptoJS.PBKDF2(password, iv, { keySize: 256 / 32 });
+                    const decrypted = CryptoJS.AES.decrypt(encryptedData, key, { iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
+                    const decryptedData = CryptoJS.enc.Base64.parse(decrypted.toString(CryptoJS.enc.Utf8)).toString(CryptoJS.enc.Latin1);
+                    
+                    const blob = new Blob([new Uint8Array([...decryptedData].map(c => c.charCodeAt(0)))], { type: "application/zip" });
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(blob);
+                    a.download = fileInput.name.replace(".enc", "");
+                    a.click();
+                } catch (e) {
+                    alert("復号に失敗しました。パスワードが間違っている可能性があります。");
+                }
+            };
+            reader.readAsText(fileInput);
+        }
+    </script>
+</body>
+</html>
