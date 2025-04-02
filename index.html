@@ -48,6 +48,7 @@
         <input type="password" id="password" placeholder="パスワード">
         <button onclick="encryptFile()">暗号化</button>
         <button onclick="decryptFile()">復号化</button>
+        <button onclick="goHome()" style="background-color: #43b581;">ホームに戻る</button>
     </div>
 
     <script>
@@ -98,6 +99,10 @@
                 }
             };
             reader.readAsText(fileInput);
+        }
+
+        function goHome() {
+            window.location.href = "https://smokeycode000.github.io/home/";
         }
     </script>
 </body>
